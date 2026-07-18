@@ -28,13 +28,31 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            opacity: 0.08;
+            opacity: 0.10;
             z-index: 0;
             pointer-events: none;
-            font-size: 300px;
-            color: #fbbf24;
-            font-weight: 900;
-            line-height: 1;
+            width: 600px;
+            height: 600px;
+            background-image: url('logo-tecno.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+
+        .watermark-expanded {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0.10;
+            z-index: 0;
+            pointer-events: none;
+            width: 600px;
+            height: 600px;
+            background-image: url('logo-tecno.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
         }
 
         .content {
@@ -500,7 +518,7 @@
 
             return (
                 <>
-                    <div className="watermark">Ⓣ</div>
+                    <div className="watermark"></div>
                     <div className="content">
                         {!isAdmin ? (
                             <VistaEmpleados
@@ -662,6 +680,18 @@
                             </div>
                         </div>
                     </div>
+
+                    {/* Marca de agua */}
+                    <div className="watermark-expanded"></div>
+
+                    {/* Botón de tuerca para acceso admin */}
+                    <button
+                        onClick={() => window.scrollTo(0, 0)}
+                        className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-br from-orange-400 to-orange-500 hover:from-orange-500 hover:to-orange-600 rounded-full shadow-lg flex items-center justify-center text-2xl transition z-50 cursor-pointer"
+                        title="Panel de Control"
+                    >
+                        ⚙️
+                    </button>
                 </div>
             );
         }
@@ -877,6 +907,18 @@
                             onSave={(updates) => onUpdateProduct(selectedBrand, editingProduct.id, updates)}
                         />
                     )}
+
+                    {/* Marca de agua */}
+                    <div className="watermark-expanded"></div>
+
+                    {/* Botón de tuerca para cerrar sesión rápido */}
+                    <button
+                        onClick={onLogout}
+                        className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-br from-red-400 to-red-500 hover:from-red-500 hover:to-red-600 rounded-full shadow-lg flex items-center justify-center text-2xl transition z-50 cursor-pointer"
+                        title="Cerrar Sesión"
+                    >
+                        🚪
+                    </button>
                 </div>
             );
         }
