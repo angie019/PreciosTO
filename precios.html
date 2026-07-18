@@ -668,6 +668,9 @@
 
         function VistaAdmin({ productos, COLORES_PASTEL, onLogout, onAddProduct, onDeleteProduct, onUpdateProduct, onTogglePauta, newProduct, setNewProduct, editingProduct, setEditingProduct }) {
             const [selectedBrand, setSelectedBrand] = useState('APPLE');
+            const [creatingBrand, setCreatingBrand] = useState(false);
+            const [newBrandName, setNewBrandName] = useState('');
+            const [colorStore, setColorStore] = useState(COLORES_PASTEL);
 
             return (
                 <div className="min-h-screen pb-24">
@@ -702,13 +705,13 @@
                                         onChange={(e) => setNewProduct({ ...newProduct, marca: e.target.value })}
                                         className="flex-1 p-3.5 border-2 border-gray-200 rounded-lg-soft font-semibold text-gray-700 focus:outline-none focus:border-orange-300"
                                     >
-                                        {Object.keys(COLORES_PASTEL).map(marca => (
+                                        {Object.keys(colorStore).map(marca => (
                                             <option key={marca} value={marca}>{marca}</option>
                                         ))}
                                     </select>
                                     <button
-                                        onClick={() => setEditingProduct({ isCreatingBrand: true })}
-                                        className="px-4 py-3.5 bg-blue-300 hover:bg-blue-400 text-gray-800 rounded-lg-soft font-bold transition shadow-soft"
+                                        onClick={() => setCreatingBrand(true)}
+                                        className="px-4 py-3.5 bg-blue-300 hover:bg-blue-400 text-gray-800 rounded-lg-soft font-bold transition shadow-soft flex-shrink-0"
                                         title="Crear nueva marca"
                                     >
                                         ➕ Marca
@@ -837,26 +840,41 @@
                         </div>
                     </div>
 
-                    {editingProduct && (
-                        <ModalEditar
-                            product={editingProduct}
-                            onClose={() => setEditingProduct(null)}
-                            onSave={(updates) => onUpdateProduct(selectedBrand, editingProduct.id, updates)}
-                            onAddBrand={(brandName) => {
+                    {creatingBrand && (
+                        <ModalCrearMarca
+                            onClose={() => setCreatingBrand(false)}
+                            onSave={(brandName) => {
+                                const marcaUpper = brandName.toUpperCase();
                                 const colors = ['#a8d5ba', '#7b9fd9', '#e0a3c8', '#ffd966', '#c5a88b', '#9b8fb5'];
                                 const randomColor = colors[Math.floor(Math.random() * colors.length)];
-                                setNewProduct({ ...newProduct, marca: brandName });
-                                setSelectedBrand(brandName);
-                                // Agregar marca con colores por defecto
-                                COLORES_PASTEL[brandName] = {
+
+                                // Agregar marca con color automático
+                                const newColorStore = { ...colorStore };
+                                newColorStore[marcaUpper] = {
                                     color: randomColor,
                                     colorLight: randomColor + '20',
                                     colorDark: randomColor,
                                     icon: '📦'
                                 };
+                                setColorStore(newColorStore);
+
                                 // Crear entrada vacía para la nueva marca en productos
-                                setProductos({ ...productos, [brandName]: [] });
+                                setProductos({ ...productos, [marcaUpper]: [] });
+
+                                // Cambiar a la nueva marca
+                                setNewProduct({ ...newProduct, marca: marcaUpper });
+                                setSelectedBrand(marcaUpper);
+                                setCreatingBrand(false);
+                                setNewBrandName('');
                             }}
+                        />
+                    )}
+
+                    {editingProduct && (
+                        <ModalEditar
+                            product={editingProduct}
+                            onClose={() => setEditingProduct(null)}
+                            onSave={(updates) => onUpdateProduct(selectedBrand, editingProduct.id, updates)}
                         />
                     )}
                 </div>
@@ -962,6 +980,54 @@
                                 className="flex-1 bg-gradient-to-r from-green-400 to-emerald-500 hover:from-green-500 hover:to-emerald-600 text-white font-bold py-3 rounded-lg-soft transition shadow-soft-md"
                             >
                                 ✅ {isCreatingBrand ? 'Crear Marca' : 'Guardar'}
+                            </button>
+                            <button
+                                onClick={onClose}
+                                className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-3 rounded-lg-soft transition shadow-soft-md"
+                            >
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        function ModalCrearMarca({ onClose, onSave }) {
+            const [marcaNombre, setMarcaNombre] = useState('');
+
+            const handleSave = () => {
+                if (!marcaNombre.trim()) {
+                    alert('El nombre de la marca no puede estar vacío');
+                    return;
+                }
+                onSave(marcaNombre);
+            };
+
+            return (
+                <div className="fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm flex items-end z-50">
+                    <div className="bg-white w-full rounded-t-3xl p-6 animate-slideUp shadow-soft-md">
+                        <h2 className="text-2xl font-black mb-5 text-gray-800">✨ Crear Nueva Marca</h2>
+
+                        <div className="mb-6">
+                            <input
+                                type="text"
+                                placeholder="Nombre de la marca (ej: samsung, lg, etc)"
+                                value={marcaNombre}
+                                onChange={(e) => setMarcaNombre(e.target.value)}
+                                className="w-full p-3.5 border-2 border-gray-300 rounded-lg-soft focus:outline-none focus:border-orange-400 font-semibold"
+                                autoFocus
+                                onKeyPress={(e) => e.key === 'Enter' && handleSave()}
+                            />
+                            <p className="text-xs text-gray-500 mt-2">💡 Se guardará automáticamente en MAYÚSCULAS</p>
+                        </div>
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={handleSave}
+                                className="flex-1 bg-gradient-to-r from-green-400 to-emerald-500 hover:from-green-500 hover:to-emerald-600 text-white font-bold py-3 rounded-lg-soft transition shadow-soft-md"
+                            >
+                                ✅ Crear Marca
                             </button>
                             <button
                                 onClick={onClose}
