@@ -557,19 +557,19 @@
                     </div>
 
                     <div className="max-w-5xl mx-auto px-4 py-8">
-                        {/* Sección de Especiales */}
-                        {productosPauta.length > 0 && (
-                            <div className="mb-12 animate-fadeIn">
-                                <div className="card-base rounded-lg-soft shadow-soft-md overflow-hidden">
-                                    {/* Header del cuadro */}
-                                    <div className="bg-gradient-to-r from-yellow-300 to-orange-300 p-6">
-                                        <h2 className="text-2xl font-black text-gray-800">✨ Especiales</h2>
-                                        <p className="text-gray-700 text-sm mt-1">Productos en oferta</p>
-                                    </div>
+                        {/* Sección de Especiales - Siempre Visible */}
+                        <div className="mb-12 animate-fadeIn">
+                            <div className="card-base rounded-lg-soft shadow-soft-md overflow-hidden">
+                                {/* Header del cuadro */}
+                                <div className="bg-gradient-to-r from-yellow-300 to-orange-300 p-6">
+                                    <h2 className="text-2xl font-black text-gray-800">✨ Especiales</h2>
+                                    <p className="text-gray-700 text-sm mt-1">Productos en oferta</p>
+                                </div>
 
-                                    {/* Tabla de productos */}
-                                    <div className="divide-y divide-gray-200">
-                                        {productosPauta.map((product, idx) => (
+                                {/* Tabla de productos */}
+                                <div className="divide-y divide-gray-200">
+                                    {productosPauta.length > 0 ? (
+                                        productosPauta.map((product, idx) => (
                                             <div key={product.id} className="p-5 hover:bg-gray-50 transition">
                                                 <div className="flex justify-between items-start gap-4">
                                                     <div className="flex-1">
@@ -593,11 +593,15 @@
                                                     </div>
                                                 </div>
                                             </div>
-                                        ))}
-                                    </div>
+                                        ))
+                                    ) : (
+                                        <div className="p-6 text-center">
+                                            <p className="text-gray-500 text-sm">Sin productos en oferta</p>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
-                        )}
+                        </div>
 
                         {/* Catálogo por Marca */}
                         <div className="animate-fadeIn">
