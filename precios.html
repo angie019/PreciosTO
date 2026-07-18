@@ -28,7 +28,7 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            opacity: 0.10;
+            opacity: 0.06;
             z-index: 0;
             pointer-events: none;
             width: 600px;
@@ -44,7 +44,7 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            opacity: 0.10;
+            opacity: 0.06;
             z-index: 5;
             pointer-events: none;
             width: 600px;
@@ -393,6 +393,7 @@
                 { id: 'ga9', nombre: 'Venu sq 2', precio: 730, novedad: '', pauta: false }
             ],
             'INSTA 360': [
+                { id: 'i0', nombre: '360 x5 bundle essential', precio: 0, novedad: 'Consultar precio', pauta: false },
                 { id: 'i1', nombre: 'Insta flow kit creator', precio: 680, novedad: '', pauta: false },
                 { id: 'i2', nombre: '360 insta caja negra bundle', precio: 2370, novedad: 'Transito', pauta: false },
                 { id: 'i3', nombre: 'Lens cap silicona x5 x4', precio: 55, novedad: '', pauta: false },
@@ -486,13 +487,23 @@
             ]
         };
 
+        // Cambia este valor cada vez que actualices DATOS_INICIALES para que el catálogo
+        // se refresque en todos los dispositivos (en vez de quedarse con la copia guardada
+        // en el navegador). Ediciones hechas desde el panel admin después de este cambio
+        // se conservan hasta el próximo bump de versión.
+        const DATA_VERSION = 'v2';
+
         function App() {
             const [isAdmin, setIsAdmin] = useState(false);
             const [adminPassword, setAdminPassword] = useState('');
             const [passwordInput, setPasswordInput] = useState('');
             const [productos, setProductos] = useState(() => {
+                const savedVersion = localStorage.getItem('tecno_productos_version');
                 const saved = localStorage.getItem('tecno_productos');
-                return saved ? JSON.parse(saved) : DATOS_INICIALES;
+                if (saved && savedVersion === DATA_VERSION) {
+                    return JSON.parse(saved);
+                }
+                return DATOS_INICIALES;
             });
             const [expandedBrand, setExpandedBrand] = useState(null);
             const [editingProduct, setEditingProduct] = useState(null);
@@ -502,6 +513,7 @@
 
             useEffect(() => {
                 localStorage.setItem('tecno_productos', JSON.stringify(productos));
+                localStorage.setItem('tecno_productos_version', DATA_VERSION);
             }, [productos]);
 
             const handleAdminLogin = (e) => {
@@ -614,7 +626,7 @@
             );
         }
 
-        function VistaEmpleados({ productos, COLORES_PASTEL, expandedBrand, setExpandedBrand, productosPauta }) {
+        function VistaEmpleados({ productos, COLORES_PASTEL, expandedBrand, setExpandedBrand, productosPauta, onAdminClick }) {
             return (
                 <div className="min-h-screen pb-24">
                     {/* Header suave */}
@@ -742,7 +754,7 @@
 
                     {/* Botón de tuerca para acceso admin */}
                     <button
-                        onClick={() => window.scrollTo(0, 0)}
+                        onClick={onAdminClick}
                         className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-br from-orange-400 to-orange-500 hover:from-orange-500 hover:to-orange-600 rounded-full shadow-lg flex items-center justify-center text-2xl transition z-50 cursor-pointer"
                         title="Panel de Control"
                     >
