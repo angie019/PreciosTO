@@ -1,0 +1,25 @@
+{
+  "name": "Tecno Outlet",
+  "short_name": "Tecno Outlet",
+  "description": "Tecno Outlet - Precios actualizados diariamente",
+  "start_url": "precios.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#d97706",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
