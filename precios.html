@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tecno Outlet - Gestor de Precios</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- React -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        * {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f8f9fa 0%, #f0f4f8 100%);
+            min-height: 100vh;
+        }
+
+        .watermark {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0.08;
+            z-index: 0;
+            pointer-events: none;
+            font-size: 300px;
+            color: #fbbf24;
+            font-weight: 900;
+            line-height: 1;
+        }
+
+        .content {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Bordes redondeados suave */
+        .rounded-xl-soft {
+            border-radius: 20px;
+        }
+
+        .rounded-lg-soft {
+            border-radius: 16px;
+        }
+
+        /* Sombras suaves */
+        .shadow-soft {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        }
+
+        .shadow-soft-md {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        /* Tarjetas con borde decorativo */
+        .card-base {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            transition: all 0.3s ease;
+        }
+
+        .card-base:hover {
+            background: rgba(255, 255, 255, 0.95);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+
+        /* Botones marca */
+        .brand-btn {
+            border-radius: 18px;
+            border: none;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .brand-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.3), transparent);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .brand-btn:hover::before {
+            opacity: 1;
+        }
+
+        .brand-btn:active {
+            transform: scale(0.98);
+        }
+
+        /* Animaciones suaves */
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        .animate-slideUp {
+            animation: slideUp 0.3s ease;
+        }
+
+        .animate-fadeIn {
+            animation: fadeIn 0.3s ease;
+        }
+
+        /* Borde decorativo con puntos */
+        .border-dots {
+            border: 2px dashed rgba(255, 255, 255, 0.4);
+        }
+
+        /* Líneas decorativas */
+        .line-decoration {
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            height: 1px;
+        }
+
+        /* Scrollbar personalizado */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .product-item {
+            transition: background-color 0.2s ease;
+            border-radius: 12px;
+        }
+
+        .product-item:hover {
+            background: rgba(0, 0, 0, 0.02);
+        }
+
+        /* Badge pauta suave */
+        .badge-pauta {
+            background: linear-gradient(135deg, #fde047 0%, #fcd34d 100%);
+            color: #78350f;
+            font-weight: 600;
+            font-size: 0.75rem;
+            padding: 0.375rem 0.875rem;
+            border-radius: 9999px;
+            display: inline-block;
+            box-shadow: 0 2px 4px rgba(245, 158, 11, 0.2);
+        }
+
+        /* Header suave */
+        .header-soft {
+            background: linear-gradient(135deg, rgba(217, 119, 6, 0.15) 0%, rgba(180, 83, 9, 0.1) 100%);
+            border-bottom: 1px solid rgba(217, 119, 6, 0.1);
+            backdrop-filter: blur(10px);
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useCallback, useMemo } = React;
+
+        // Paleta de colores pastel suave (del dashboard)
+        const COLORES_PASTEL = {
+            'APPLE': {
+                color: '#a8d5ba',
+                colorLight: '#e8f5f0',
+                colorDark: '#7ac89f',
+                icon: '🍎'
+            },
+            'DJI': {
+                color: '#7b9fd9',
+                colorLight: '#e6f0ff',
+                colorDark: '#5a7fb8',
+                icon: '🚁'
+            },
+            'CANON': {
+                color: '#e0a3c8',
+                colorLight: '#fdf0f8',
+                colorDark: '#d179b0',
+                icon: '📷'
+            },
+            'GOPRO': {
+                color: '#7b9fd9',
+                colorLight: '#e6f0ff',
+                colorDark: '#5a7fb8',
+                icon: '🎬'
+            },
+            'GARMIN': {
+                color: '#a8d5ba',
+                colorLight: '#e8f5f0',
+                colorDark: '#7ac89f',
+                icon: '📍'
+            },
+            'INSTA 360': {
+                color: '#ffd966',
+                colorLight: '#fffbeb',
+                colorDark: '#f4d666',
+                icon: '🌐'
+            },
+            'NIKON': {
+                color: '#e0a3c8',
+                colorLight: '#fdf0f8',
+                colorDark: '#d179b0',
+                icon: '📸'
+            },
+            'SONY': {
+                color: '#7b9fd9',
+                colorLight: '#e6f0ff',
+                colorDark: '#5a7fb8',
+                icon: '🎧'
+            },
+            'OTROS': {
+                color: '#a8d5ba',
+                colorLight: '#e8f5f0',
+                colorDark: '#7ac89f',
+                icon: '📦'
+            }
+        };
+
+        const DATOS_INICIALES = {
+            'APPLE': [
+                { id: 'a1', nombre: 'Airpods pro 3', precio: 940, novedad: '', pauta: false },
+                { id: 'a2', nombre: 'Airpods 3 normales', precio: 490, novedad: '', pauta: false },
+                { id: 'a3', nombre: 'Mac book neo', precio: 2590, novedad: 'Transito', pauta: false },
+                { id: 'a4', nombre: 'Ipad 11 128', precio: 1370, novedad: '', pauta: false },
+                { id: 'a5', nombre: 'Iphone 16 pro max 256 gb', precio: 4690, novedad: '', pauta: false },
+                { id: 'a6', nombre: 'AirPods serie 4 sencillos', precio: 480, novedad: '', pauta: false },
+                { id: 'a7', nombre: 'Airpods pro serie 2', precio: 780, novedad: '', pauta: false },
+                { id: 'a8', nombre: 'Magic keyboard 11 new model', precio: 850, novedad: '', pauta: false },
+                { id: 'a9', nombre: 'Ipad 11 256', precio: 1770, novedad: '', pauta: false },
+                { id: 'a10', nombre: 'Airtag *1', precio: 110, novedad: '', pauta: false },
+                { id: 'a11', nombre: 'Airtag *4', precio: 360, novedad: '', pauta: false },
+                { id: 'a12', nombre: 'Airpods cable usb-c lighning', precio: 90, novedad: '', pauta: false },
+                { id: 'a13', nombre: 'Magic trackpad', precio: 260, novedad: '', pauta: false },
+                { id: 'a14', nombre: 'iPad Air 11 128 m3', precio: 2230, novedad: '', pauta: false },
+                { id: 'a15', nombre: 'Pencil pro', precio: 490, novedad: '', pauta: false },
+                { id: 'a16', nombre: 'Mac. Mini 8 gb. 256 M2', precio: 1450, novedad: '', pauta: false },
+                { id: 'a17', nombre: 'iMac m1 8 gb 512 rb', precio: 3450, novedad: '', pauta: false }
+            ],
+            'DJI': [
+                { id: 'd1', nombre: 'Dji neo 2 combo', precio: 1790, novedad: '', pauta: false },
+                { id: 'd2', nombre: 'Dji mavic 4 pro combo', precio: 11350, novedad: '', pauta: false },
+                { id: 'd3', nombre: 'Dji mic mini dual', precio: 470, novedad: '', pauta: false },
+                { id: 'd4', nombre: 'Dni mic mini sencillo', precio: 340, novedad: '', pauta: false },
+                { id: 'd5', nombre: 'Dji mini 5 pro combo plus', precio: 4790, novedad: 'Transito', pauta: false },
+                { id: 'd6', nombre: 'Dji mic 3 dual', precio: 1180, novedad: '', pauta: false },
+                { id: 'd7', nombre: 'Dji 360 adventure combo', precio: 2190, novedad: '', pauta: false },
+                { id: 'd8', nombre: 'Osmo pocket 3 kit creator', precio: 2370, novedad: '', pauta: false },
+                { id: 'd9', nombre: 'Dji air 3s combo', precio: 6590, novedad: 'Transito', pauta: false },
+                { id: 'd10', nombre: 'Dji osmo 5 action adventure', precio: 1770, novedad: '', pauta: false },
+                { id: 'd11', nombre: 'Dji avata 2 combo', precio: 3490, novedad: '', pauta: false },
+                { id: 'd12', nombre: 'Dji avata 2 combo maleta', precio: 4390, novedad: '', pauta: false },
+                { id: 'd13', nombre: 'Dji osmo 5 pro standard combo', precio: 1580, novedad: '', pauta: false },
+                { id: 'd14', nombre: 'Dji mini 4 k solo', precio: 1360, novedad: '', pauta: false },
+                { id: 'd15', nombre: 'Dji mic I dual', precio: 750, novedad: '', pauta: false },
+                { id: 'd16', nombre: 'Osmo mobile 7 Pro', precio: 530, novedad: '', pauta: false },
+                { id: 'd17', nombre: 'Dji osmo action 4 standar', precio: 940, novedad: '', pauta: false },
+                { id: 'd18', nombre: 'Dji osmo mobile SE', precio: 330, novedad: '', pauta: false },
+                { id: 'd19', nombre: 'Dji osmo nano combo 128 gb', precio: 1590, novedad: '', pauta: false },
+                { id: 'd20', nombre: 'Dji Mini 2 SE', precio: 380, novedad: '', pauta: false },
+                { id: 'd21', nombre: 'DJI Air 2S', precio: 4200, novedad: '', pauta: false },
+                { id: 'd22', nombre: 'DJI Avata 3', precio: 5990, novedad: '', pauta: false }
+            ],
+            'CANON': [
+                { id: 'c1', nombre: 'Canon r7 body', precio: 4850, novedad: '', pauta: false },
+                { id: 'c2', nombre: 'Canon g7x mark III silver', precio: 4980, novedad: 'Transito', pauta: false },
+                { id: 'c3', nombre: 'Canon g7x mark III black', precio: 5150, novedad: '', pauta: false },
+                { id: 'c4', nombre: 'Canon m50 mark II', precio: 3200, novedad: '', pauta: false },
+                { id: 'c5', nombre: 'Canon SX540', precio: 1890, novedad: '', pauta: false },
+                { id: 'c6', nombre: 'Canon EOS Rebel T7', precio: 2800, novedad: '', pauta: false },
+                { id: 'c7', nombre: 'Canon 5D Mark IV', precio: 6500, novedad: '', pauta: false },
+                { id: 'c8', nombre: 'Canon R6 Mark II', precio: 8900, novedad: '', pauta: false },
+                { id: 'c9', nombre: 'Canon M6 Mark II', precio: 5600, novedad: '', pauta: false },
+                { id: 'c10', nombre: 'Canon 7D Mark II', precio: 5200, novedad: '', pauta: false },
+                { id: 'c11', nombre: 'Canon EF 24-70mm f/2.8L II', precio: 2800, novedad: '', pauta: false },
+                { id: 'c12', nombre: 'Canon RF 85mm f/1.2L', precio: 3500, novedad: '', pauta: false },
+                { id: 'c13', nombre: 'Canon Speedlite 430EX III-RT', precio: 450, novedad: '', pauta: false },
+                { id: 'c14', nombre: 'Canon EOS M50 Mark II', precio: 3100, novedad: '', pauta: false },
+                { id: 'c15', nombre: 'Canon PowerShot G5X Mark II', precio: 3800, novedad: '', pauta: false },
+                { id: 'c16', nombre: 'Canon SX70HS', precio: 2200, novedad: '', pauta: false },
+                { id: 'c17', nombre: 'Canon SX730HS', precio: 1600, novedad: '', pauta: false },
+                { id: 'c18', nombre: 'Canon EOS R100', precio: 6200, novedad: '', pauta: false },
+                { id: 'c19', nombre: 'Canon EOS RP', precio: 4800, novedad: '', pauta: false },
+                { id: 'c20', nombre: 'Canon EF-M 18-150mm', precio: 1200, novedad: '', pauta: false },
+                { id: 'c21', nombre: 'Canon RF 24-105mm f/4L IS', precio: 2100, novedad: '', pauta: false },
+                { id: 'c22', nombre: 'Canon EF 70-200mm f/2.8L IS II', precio: 2600, novedad: '', pauta: false },
+                { id: 'c23', nombre: 'Canon SL3 (T8i)', precio: 2950, novedad: '', pauta: false },
+                { id: 'c24', nombre: 'Canon PowerShot A2600', precio: 890, novedad: '', pauta: false },
+                { id: 'c25', nombre: 'Canon Ixus 185', precio: 1100, novedad: '', pauta: false },
+                { id: 'c26', nombre: 'Canon EOS 4000D', precio: 2400, novedad: '', pauta: false },
+                { id: 'c27', nombre: 'Canon EOS 2000D', precio: 1950, novedad: '', pauta: false },
+                { id: 'c28', nombre: 'Canon R8 Body', precio: 9200, novedad: '', pauta: false },
+                { id: 'c29', nombre: 'Canon 6D Mark II', precio: 5900, novedad: '', pauta: false },
+                { id: 'c30', nombre: 'Canon 80D', precio: 4100, novedad: '', pauta: false },
+                { id: 'c31', nombre: 'Canon M100', precio: 2800, novedad: '', pauta: false },
+                { id: 'c32', nombre: 'Canon EOS TS-E 90mm f/2.8', precio: 1850, novedad: '', pauta: false },
+                { id: 'c33', nombre: 'Canon RF 35mm f/1.8 Macro IS STM', precio: 1200, novedad: '', pauta: false },
+                { id: 'c34', nombre: 'Canon EF 50mm f/1.4 USM', precio: 680, novedad: '', pauta: false },
+                { id: 'c35', nombre: 'Canon Tripod & Head', precio: 450, novedad: '', pauta: false }
+            ],
+            'GOPRO': [
+                { id: 'g1', nombre: 'Gopro 13', precio: 1350, novedad: 'Transito', pauta: false },
+                { id: 'g2', nombre: 'Dual battery charger 2 bat', precio: 330, novedad: '', pauta: false },
+                { id: 'g3', nombre: 'HOUSING 9-12 orig', precio: 250, novedad: '', pauta: false },
+                { id: 'g4', nombre: 'GoPro HERO11', precio: 1200, novedad: '', pauta: false },
+                { id: 'g5', nombre: 'GoPro MAX', precio: 1600, novedad: '', pauta: false },
+                { id: 'g6', nombre: 'GoPro Fusion', precio: 1450, novedad: '', pauta: false },
+                { id: 'g7', nombre: 'GoPro HERO12', precio: 1450, novedad: '', pauta: false },
+                { id: 'g8', nombre: 'GoPro Bite Mount', precio: 45, novedad: '', pauta: false },
+                { id: 'g9', nombre: 'GoPro Head Strap Mount', precio: 55, novedad: '', pauta: false },
+                { id: 'g10', nombre: 'GoPro Chest Mount', precio: 60, novedad: '', pauta: false },
+                { id: 'g11', nombre: 'GoPro 64GB Memory Card', precio: 120, novedad: '', pauta: false },
+                { id: 'g12', nombre: 'GoPro Battery Bacpac', precio: 100, novedad: '', pauta: false },
+                { id: 'g13', nombre: 'GoPro Wi-Fi Remote', precio: 85, novedad: '', pauta: false },
+                { id: 'g14', nombre: 'GoPro 3-Way Mount', precio: 75, novedad: '', pauta: false }
+            ],
+            'GARMIN': [
+                { id: 'ga1', nombre: 'Gps inreach mini 2', precio: 1820, novedad: '', pauta: false },
+                { id: 'ga2', nombre: 'Fenix 7x safiro solar', precio: 2680, novedad: '', pauta: false },
+                { id: 'ga3', nombre: 'Instinc 2s', precio: 950, novedad: '', pauta: false },
+                { id: 'ga4', nombre: 'eTrex 32x', precio: 680, novedad: '', pauta: false },
+                { id: 'ga5', nombre: 'Forerunner 265', precio: 580, novedad: '', pauta: false },
+                { id: 'ga6', nombre: 'Garmin Venu 3', precio: 1200, novedad: '', pauta: false },
+                { id: 'ga7', nombre: 'GPSMAP 67i', precio: 1850, novedad: '', pauta: false },
+                { id: 'ga8', nombre: 'Epix Gen 2', precio: 1600, novedad: '', pauta: false },
+                { id: 'ga9', nombre: 'Fenix 7', precio: 2200, novedad: '', pauta: false }
+            ],
+            'INSTA 360': [
+                { id: 'i1', nombre: '360 x5 bundle essential', precio: 2100, novedad: '', pauta: false },
+                { id: 'i2', nombre: 'Insta flow kit creator', precio: 680, novedad: '', pauta: false },
+                { id: 'i3', nombre: '360 insta caja negra bundle', precio: 2370, novedad: 'Transito', pauta: false },
+                { id: 'i4', nombre: 'Insta X4 Body', precio: 1890, novedad: '', pauta: false },
+                { id: 'i5', nombre: 'Insta Flow Gimbal', precio: 450, novedad: '', pauta: false },
+                { id: 'i6', nombre: 'Insta Pro', precio: 3200, novedad: '', pauta: false }
+            ],
+            'NIKON': [
+                { id: 'n1', nombre: 'Z6 mark III', precio: 7550, novedad: 'Transito', pauta: false },
+                { id: 'n2', nombre: 'P1100', precio: 3990, novedad: '', pauta: false },
+                { id: 'n3', nombre: 'D7500 18-140', precio: 3920, novedad: '', pauta: false },
+                { id: 'n4', nombre: 'D850 Body', precio: 5200, novedad: '', pauta: false },
+                { id: 'n5', nombre: 'Z8 Body', precio: 8900, novedad: '', pauta: false },
+                { id: 'n6', nombre: 'D780 Body', precio: 4800, novedad: '', pauta: false },
+                { id: 'n7', nombre: 'Z5 Body', precio: 3600, novedad: '', pauta: false },
+                { id: 'n8', nombre: 'AF-S 24-70mm f/2.8G ED', precio: 2100, novedad: '', pauta: false },
+                { id: 'n9', nombre: 'Z 70-180mm f/2.8', precio: 2800, novedad: '', pauta: false },
+                { id: 'n10', nombre: 'Z 50mm f/1.8S', precio: 1200, novedad: '', pauta: false }
+            ],
+            'SONY': [
+                { id: 's1', nombre: 'PS5 DIGITAL', precio: 2090, novedad: '', pauta: false },
+                { id: 's2', nombre: '7 V BODY', precio: 10190, novedad: '', pauta: false },
+                { id: 's3', nombre: '7 III 28-70', precio: 5590, novedad: '', pauta: false },
+                { id: 's4', nombre: 'A6700 Body', precio: 4200, novedad: '', pauta: false },
+                { id: 's5', nombre: 'A6500 Body', precio: 3800, novedad: '', pauta: false },
+                { id: 's6', nombre: 'FX30 Compact', precio: 4600, novedad: '', pauta: false },
+                { id: 's7', nombre: 'A7R IV Body', precio: 7200, novedad: '', pauta: false },
+                { id: 's8', nombre: 'A7 IV Body', precio: 5400, novedad: '', pauta: false },
+                { id: 's9', nombre: 'A9 III Body', precio: 11200, novedad: '', pauta: false },
+                { id: 's10', nombre: 'FE 24-70mm f/2.8 GM II', precio: 3200, novedad: '', pauta: false },
+                { id: 's11', nombre: 'FE 70-200mm f/2.8 GM OSS II', precio: 2900, novedad: '', pauta: false },
+                { id: 's12', nombre: 'FE 50mm f/1.4 GM', precio: 1850, novedad: '', pauta: false },
+                { id: 's13', nombre: 'WH-1000XM5 Headphones', precio: 580, novedad: '', pauta: false },
+                { id: 's14', nombre: 'WH-CH720 Headphones', precio: 180, novedad: '', pauta: false },
+                { id: 's15', nombre: 'SRS-XB100 Speaker', precio: 250, novedad: '', pauta: false },
+                { id: 's16', nombre: 'ZV-E1 Body', precio: 3200, novedad: '', pauta: false },
+                { id: 's17', nombre: 'HXR-NX30 Camcorder', precio: 4800, novedad: '', pauta: false },
+                { id: 's18', nombre: 'PMW-F3 Camcorder', precio: 6500, novedad: '', pauta: false }
+            ],
+            'OTROS': Array.from({ length: 50 }, (_, i) => ({
+                id: `o${i + 1}`,
+                nombre: `Producto Otros ${i + 1}`,
+                precio: Math.floor(Math.random() * 3000) + 100,
+                novedad: i % 5 === 0 ? 'Nuevo' : '',
+                pauta: false
+            }))
+        };
+
+        function App() {
+            const [isAdmin, setIsAdmin] = useState(false);
+            const [adminPassword, setAdminPassword] = useState('');
+            const [passwordInput, setPasswordInput] = useState('');
+            const [productos, setProductos] = useState(() => {
+                const saved = localStorage.getItem('tecno_productos');
+                return saved ? JSON.parse(saved) : DATOS_INICIALES;
+            });
+            const [expandedBrand, setExpandedBrand] = useState(null);
+            const [editingProduct, setEditingProduct] = useState(null);
+            const [newProduct, setNewProduct] = useState({ marca: 'APPLE', nombre: '', precio: '', novedad: '', pauta: false });
+
+            const ADMIN_PASSWORD = 'tecno2024';
+
+            useEffect(() => {
+                localStorage.setItem('tecno_productos', JSON.stringify(productos));
+            }, [productos]);
+
+            const handleAdminLogin = (e) => {
+                e.preventDefault();
+                if (passwordInput === ADMIN_PASSWORD) {
+                    setIsAdmin(true);
+                    setPasswordInput('');
+                } else {
+                    alert('Contraseña incorrecta');
+                }
+            };
+
+            const handleAdminLogout = () => {
+                setIsAdmin(false);
+            };
+
+            const handleAddProduct = (marca) => {
+                if (!newProduct.nombre || !newProduct.precio) return;
+
+                const id = `${marca.toLowerCase()}_${Date.now()}`;
+                const updatedProducts = {
+                    ...productos,
+                    [marca]: [...(productos[marca] || []), {
+                        id,
+                        nombre: newProduct.nombre,
+                        precio: parseFloat(newProduct.precio),
+                        novedad: newProduct.novedad,
+                        pauta: newProduct.pauta
+                    }]
+                };
+                setProductos(updatedProducts);
+                setNewProduct({ marca: 'APPLE', nombre: '', precio: '', novedad: '', pauta: false });
+            };
+
+            const handleDeleteProduct = (marca, productId) => {
+                setProductos({
+                    ...productos,
+                    [marca]: productos[marca].filter(p => p.id !== productId)
+                });
+            };
+
+            const handleUpdateProduct = (marca, productId, updates) => {
+                setProductos({
+                    ...productos,
+                    [marca]: productos[marca].map(p =>
+                        p.id === productId ? { ...p, ...updates } : p
+                    )
+                });
+                setEditingProduct(null);
+            };
+
+            const handleTogglePauta = (marca, productId) => {
+                setProductos({
+                    ...productos,
+                    [marca]: productos[marca].map(p =>
+                        p.id === productId ? { ...p, pauta: !p.pauta } : p
+                    )
+                });
+            };
+
+            const productosPauta = useMemo(() => {
+                const result = [];
+                Object.entries(productos).forEach(([marca, prods]) => {
+                    prods.forEach(p => {
+                        if (p.pauta) result.push({ ...p, marca });
+                    });
+                });
+                return result;
+            }, [productos]);
+
+            return (
+                <>
+                    <div className="watermark">Ⓣ</div>
+                    <div className="content">
+                        {!isAdmin ? (
+                            <VistaEmpleados
+                                productos={productos}
+                                COLORES_PASTEL={COLORES_PASTEL}
+                                expandedBrand={expandedBrand}
+                                setExpandedBrand={setExpandedBrand}
+                                productosPauta={productosPauta}
+                                onAdminClick={() => setAdminPassword('')}
+                            />
+                        ) : (
+                            <VistaAdmin
+                                productos={productos}
+                                COLORES_PASTEL={COLORES_PASTEL}
+                                onLogout={handleAdminLogout}
+                                onAddProduct={handleAddProduct}
+                                onDeleteProduct={handleDeleteProduct}
+                                onUpdateProduct={handleUpdateProduct}
+                                onTogglePauta={handleTogglePauta}
+                                newProduct={newProduct}
+                                setNewProduct={setNewProduct}
+                                editingProduct={editingProduct}
+                                setEditingProduct={setEditingProduct}
+                            />
+                        )}
+
+                        {!isAdmin && adminPassword === '' && (
+                            <ModalAdmin
+                                onClose={() => setAdminPassword('closed')}
+                                onLogin={handleAdminLogin}
+                                passwordInput={passwordInput}
+                                setPasswordInput={setPasswordInput}
+                            />
+                        )}
+                    </div>
+                </>
+            );
+        }
+
+        function VistaEmpleados({ productos, COLORES_PASTEL, expandedBrand, setExpandedBrand, productosPauta }) {
+            return (
+                <div className="min-h-screen pb-24">
+                    {/* Header suave */}
+                    <div className="sticky top-0 z-40 header-soft">
+                        <div className="max-w-5xl mx-auto px-4 py-4">
+                            <div className="flex items-center gap-3">
+                                <img src="logo-tecno.png" alt="Tecno Outlet" className="h-20 flex-shrink-0" />
+                                <div>
+                                    <h1 className="text-2xl font-black text-gray-800">Tecno Outlet</h1>
+                                    <p className="text-gray-500 text-xs mt-0.5">Precios actualizados diariamente</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="max-w-5xl mx-auto px-4 py-8">
+                        {/* Sección de Especiales */}
+                        {productosPauta.length > 0 && (
+                            <div className="mb-12 animate-fadeIn">
+                                <div className="card-base rounded-lg-soft shadow-soft-md overflow-hidden">
+                                    {/* Header del cuadro */}
+                                    <div className="bg-gradient-to-r from-yellow-300 to-orange-300 p-6">
+                                        <h2 className="text-2xl font-black text-gray-800">✨ Especiales</h2>
+                                        <p className="text-gray-700 text-sm mt-1">Productos en oferta</p>
+                                    </div>
+
+                                    {/* Tabla de productos */}
+                                    <div className="divide-y divide-gray-200">
+                                        {productosPauta.map((product, idx) => (
+                                            <div key={product.id} className="p-5 hover:bg-gray-50 transition">
+                                                <div className="flex justify-between items-start gap-4">
+                                                    <div className="flex-1">
+                                                        <div className="flex items-center gap-2 mb-2">
+                                                            <span
+                                                                className="text-xs font-bold px-2.5 py-1 rounded-full text-white"
+                                                                style={{ backgroundColor: COLORES_PASTEL[product.marca]?.color }}
+                                                            >
+                                                                {product.marca}
+                                                            </span>
+                                                        </div>
+                                                        <p className="font-bold text-gray-800 text-base">{product.nombre}</p>
+                                                        {product.novedad && (
+                                                            <p className="text-xs text-gray-600 mt-2">📝 {product.novedad}</p>
+                                                        )}
+                                                    </div>
+                                                    <div className="text-right flex-shrink-0">
+                                                        <p className="text-2xl font-black" style={{ color: COLORES_PASTEL[product.marca]?.color }}>
+                                                            ${product.precio.toLocaleString()}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Catálogo por Marca */}
+                        <div className="animate-fadeIn">
+                            <h2 className="text-2xl font-black text-gray-800 mb-6">Catálogo por Marca</h2>
+
+                            <div className="grid gap-4">
+                                {Object.entries(COLORES_PASTEL).map(([marcaName, config]) => (
+                                    <div key={marcaName}>
+                                        <button
+                                            onClick={() => setExpandedBrand(expandedBrand === marcaName ? null : marcaName)}
+                                            className="brand-btn w-full p-5 rounded-lg-soft font-bold text-white transition shadow-soft-md"
+                                            style={{
+                                                backgroundColor: config.color,
+                                                color: '#1f2937'
+                                            }}
+                                        >
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-lg">{config.icon} {marcaName}</span>
+                                                <span className="text-xl">{expandedBrand === marcaName ? '▼' : '▶'}</span>
+                                            </div>
+                                            <p className="text-xs font-normal mt-2 opacity-75">
+                                                {(productos[marcaName] || []).length} productos
+                                            </p>
+                                        </button>
+
+                                        {expandedBrand === marcaName && (
+                                            <div className="mt-3 card-base rounded-lg-soft shadow-soft-md overflow-hidden animate-slideUp">
+                                                {(productos[marcaName] || []).map((product) => (
+                                                    <div
+                                                        key={product.id}
+                                                        className="product-item border-b last:border-b-0 p-4 mx-4 my-3"
+                                                        style={{
+                                                            backgroundColor: product.pauta ? `${config.colorLight}` : 'transparent'
+                                                        }}
+                                                    >
+                                                        <div className="flex justify-between items-start gap-3">
+                                                            <div className="flex-1">
+                                                                <p className="font-semibold text-gray-800">{product.nombre}</p>
+                                                                {product.novedad && (
+                                                                    <p className="text-xs text-gray-500 mt-2">📝 {product.novedad}</p>
+                                                                )}
+                                                                {product.pauta && (
+                                                                    <div className="badge-pauta mt-3">🎯 PAUTA</div>
+                                                                )}
+                                                            </div>
+                                                            <div className="text-right flex-shrink-0">
+                                                                <p className="text-xl font-black" style={{ color: config.color }}>
+                                                                    ${product.precio.toLocaleString()}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        function VistaAdmin({ productos, COLORES_PASTEL, onLogout, onAddProduct, onDeleteProduct, onUpdateProduct, onTogglePauta, newProduct, setNewProduct, editingProduct, setEditingProduct }) {
+            const [selectedBrand, setSelectedBrand] = useState('APPLE');
+
+            return (
+                <div className="min-h-screen pb-24">
+                    {/* Header Admin */}
+                    <div className="sticky top-0 z-40 bg-gradient-to-r from-orange-100 to-red-100 border-b border-orange-200 backdrop-filter backdrop-blur-md">
+                        <div className="max-w-5xl mx-auto px-4 py-4 flex justify-between items-center">
+                            <div className="flex items-center gap-3">
+                                <img src="logo-tecno.png" alt="Tecno Outlet" className="h-20 flex-shrink-0" />
+                                <div>
+                                    <h1 className="text-2xl font-black text-gray-800">🔧 Panel Admin</h1>
+                                    <p className="text-gray-600 text-xs mt-0.5">Gestión de precios</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={onLogout}
+                                className="bg-white text-orange-600 px-5 py-2.5 rounded-lg-soft font-bold hover:bg-orange-50 transition shadow-soft flex-shrink-0"
+                            >
+                                Salir
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="max-w-5xl mx-auto px-4 py-8">
+                        {/* Formulario */}
+                        <div className="card-base rounded-lg-soft shadow-soft-md p-7 mb-10 border-t-4 border-orange-400 animate-fadeIn">
+                            <h2 className="text-xl font-black mb-6 text-gray-800">Agregar Nuevo Producto</h2>
+
+                            <div className="grid gap-4 mb-6">
+                                <select
+                                    value={newProduct.marca}
+                                    onChange={(e) => setNewProduct({ ...newProduct, marca: e.target.value })}
+                                    className="p-3.5 border-2 border-gray-200 rounded-lg-soft font-semibold text-gray-700 focus:outline-none focus:border-orange-300"
+                                >
+                                    {Object.keys(COLORES_PASTEL).map(marca => (
+                                        <option key={marca} value={marca}>{marca}</option>
+                                    ))}
+                                </select>
+
+                                <input
+                                    type="text"
+                                    placeholder="Nombre del producto"
+                                    value={newProduct.nombre}
+                                    onChange={(e) => setNewProduct({ ...newProduct, nombre: e.target.value })}
+                                    className="p-3.5 border-2 border-gray-200 rounded-lg-soft focus:outline-none focus:border-orange-300"
+                                />
+
+                                <input
+                                    type="number"
+                                    placeholder="Precio"
+                                    value={newProduct.precio}
+                                    onChange={(e) => setNewProduct({ ...newProduct, precio: e.target.value })}
+                                    className="p-3.5 border-2 border-gray-200 rounded-lg-soft focus:outline-none focus:border-orange-300"
+                                />
+
+                                <input
+                                    type="text"
+                                    placeholder="Observaciones (usado, sin caja, etc)"
+                                    value={newProduct.novedad}
+                                    onChange={(e) => setNewProduct({ ...newProduct, novedad: e.target.value })}
+                                    className="p-3.5 border-2 border-gray-200 rounded-lg-soft focus:outline-none focus:border-orange-300"
+                                />
+
+                                <label className="flex items-center p-4 border-2 border-gray-200 rounded-lg-soft cursor-pointer hover:bg-gray-50 transition">
+                                    <input
+                                        type="checkbox"
+                                        checked={newProduct.pauta}
+                                        onChange={(e) => setNewProduct({ ...newProduct, pauta: e.target.checked })}
+                                        className="w-5 h-5 mr-3 accent-orange-400"
+                                    />
+                                    <span className="font-semibold text-gray-800">Marcar como PAUTA</span>
+                                </label>
+                            </div>
+
+                            <button
+                                onClick={() => onAddProduct(newProduct.marca)}
+                                className="w-full bg-gradient-to-r from-green-400 to-emerald-500 hover:from-green-500 hover:to-emerald-600 text-white font-bold py-3 rounded-lg-soft transition shadow-soft-md"
+                            >
+                                ✅ Agregar Producto
+                            </button>
+                        </div>
+
+                        {/* Selector de Marca */}
+                        <div className="mb-8">
+                            <h3 className="text-lg font-black mb-4 text-gray-800">Editar por Marca</h3>
+                            <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                                {Object.entries(COLORES_PASTEL).map(([marca, config]) => (
+                                    <button
+                                        key={marca}
+                                        onClick={() => setSelectedBrand(marca)}
+                                        className={`p-3 rounded-lg-soft font-bold text-white transition shadow-soft text-sm ${
+                                            selectedBrand === marca ? 'ring-3 ring-offset-2' : ''
+                                        }`}
+                                        style={{
+                                            backgroundColor: config.color,
+                                            ringColor: config.color,
+                                            color: '#1f2937'
+                                        }}
+                                    >
+                                        {marca}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Listado de Productos */}
+                        <div className="card-base rounded-lg-soft shadow-soft-md overflow-hidden animate-fadeIn">
+                            <div className="p-6" style={{ backgroundColor: COLORES_PASTEL[selectedBrand]?.colorLight }}>
+                                <h3 className="text-lg font-black text-gray-800">{selectedBrand} ({(productos[selectedBrand] || []).length} productos)</h3>
+                            </div>
+
+                            <div className="divide-y divide-gray-200">
+                                {(productos[selectedBrand] || []).map(product => (
+                                    <div key={product.id} className="p-5 hover:bg-gray-50 transition">
+                                        <div className="flex justify-between items-start gap-4 mb-3">
+                                            <div className="flex-1">
+                                                <p className="font-bold text-gray-800">{product.nombre}</p>
+                                                {product.novedad && (
+                                                    <p className="text-sm text-gray-600 mt-2">📝 {product.novedad}</p>
+                                                )}
+                                            </div>
+                                            <div className="text-right flex-shrink-0">
+                                                <p className="text-2xl font-black" style={{ color: COLORES_PASTEL[selectedBrand]?.color }}>
+                                                    ${product.precio.toLocaleString()}
+                                                </p>
+                                                {product.pauta && (
+                                                    <span className="inline-block mt-2 badge-pauta">PAUTA</span>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => onTogglePauta(selectedBrand, product.id)}
+                                                className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition shadow-soft ${
+                                                    product.pauta
+                                                        ? 'bg-yellow-300 hover:bg-yellow-400 text-gray-800'
+                                                        : 'bg-gray-200 hover:bg-gray-300 text-gray-800'
+                                                }`}
+                                            >
+                                                {product.pauta ? '✅ En Pauta' : '➕ Pauta'}
+                                            </button>
+                                            <button
+                                                onClick={() => setEditingProduct(product)}
+                                                className="px-4 py-2.5 bg-blue-300 hover:bg-blue-400 text-gray-800 rounded-lg text-sm font-bold transition shadow-soft"
+                                            >
+                                                ✏️ Editar
+                                            </button>
+                                            <button
+                                                onClick={() => onDeleteProduct(selectedBrand, product.id)}
+                                                className="px-4 py-2.5 bg-red-300 hover:bg-red-400 text-gray-800 rounded-lg text-sm font-bold transition shadow-soft"
+                                            >
+                                                🗑️ Borrar
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    {editingProduct && (
+                        <ModalEditar
+                            product={editingProduct}
+                            onClose={() => setEditingProduct(null)}
+                            onSave={(updates) => onUpdateProduct(selectedBrand, editingProduct.id, updates)}
+                        />
+                    )}
+                </div>
+            );
+        }
+
+        function ModalAdmin({ onClose, onLogin, passwordInput, setPasswordInput }) {
+            return (
+                <div className="fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm flex items-end z-50">
+                    <div className="bg-white w-full rounded-t-3xl p-6 animate-slideUp shadow-soft-md">
+                        <h2 className="text-2xl font-black mb-5 text-gray-800">🔐 Acceso Admin</h2>
+                        <form onSubmit={onLogin}>
+                            <input
+                                type="password"
+                                placeholder="Contraseña"
+                                value={passwordInput}
+                                onChange={(e) => setPasswordInput(e.target.value)}
+                                className="w-full p-4 border-2 border-gray-300 rounded-lg-soft mb-5 font-semibold focus:outline-none focus:border-orange-400"
+                                autoFocus
+                            />
+                            <div className="flex gap-3">
+                                <button
+                                    type="submit"
+                                    className="flex-1 bg-gradient-to-r from-green-400 to-emerald-500 hover:from-green-500 hover:to-emerald-600 text-white font-bold py-3 rounded-lg-soft transition shadow-soft-md"
+                                >
+                                    Entrar
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={onClose}
+                                    className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-3 rounded-lg-soft transition shadow-soft-md"
+                                >
+                                    Cancelar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            );
+        }
+
+        function ModalEditar({ product, onClose, onSave }) {
+            const [nombre, setNombre] = useState(product.nombre);
+            const [precio, setPrecio] = useState(product.precio);
+            const [novedad, setNovedad] = useState(product.novedad);
+
+            const handleSave = () => {
+                onSave({
+                    nombre,
+                    precio: parseFloat(precio),
+                    novedad
+                });
+                onClose();
+            };
+
+            return (
+                <div className="fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm flex items-end z-50">
+                    <div className="bg-white w-full rounded-t-3xl p-6 animate-slideUp shadow-soft-md">
+                        <h2 className="text-2xl font-black mb-5 text-gray-800">✏️ Editar Producto</h2>
+
+                        <div className="grid gap-4 mb-6">
+                            <input
+                                type="text"
+                                value={nombre}
+                                onChange={(e) => setNombre(e.target.value)}
+                                className="p-3.5 border-2 border-gray-300 rounded-lg-soft focus:outline-none focus:border-orange-400"
+                                placeholder="Nombre"
+                            />
+                            <input
+                                type="number"
+                                value={precio}
+                                onChange={(e) => setPrecio(e.target.value)}
+                                className="p-3.5 border-2 border-gray-300 rounded-lg-soft focus:outline-none focus:border-orange-400"
+                                placeholder="Precio"
+                            />
+                            <input
+                                type="text"
+                                value={novedad}
+                                onChange={(e) => setNovedad(e.target.value)}
+                                className="p-3.5 border-2 border-gray-300 rounded-lg-soft focus:outline-none focus:border-orange-400"
+                                placeholder="Observaciones"
+                            />
+                        </div>
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={handleSave}
+                                className="flex-1 bg-gradient-to-r from-green-400 to-emerald-500 hover:from-green-500 hover:to-emerald-600 text-white font-bold py-3 rounded-lg-soft transition shadow-soft-md"
+                            >
+                                ✅ Guardar
+                            </button>
+                            <button
+                                onClick={onClose}
+                                className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-3 rounded-lg-soft transition shadow-soft-md"
+                            >
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
