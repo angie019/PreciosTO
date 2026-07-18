@@ -692,15 +692,24 @@
                             <h2 className="text-xl font-black mb-6 text-gray-800">Agregar Nuevo Producto</h2>
 
                             <div className="grid gap-4 mb-6">
-                                <select
-                                    value={newProduct.marca}
-                                    onChange={(e) => setNewProduct({ ...newProduct, marca: e.target.value })}
-                                    className="p-3.5 border-2 border-gray-200 rounded-lg-soft font-semibold text-gray-700 focus:outline-none focus:border-orange-300"
-                                >
-                                    {Object.keys(COLORES_PASTEL).map(marca => (
-                                        <option key={marca} value={marca}>{marca}</option>
-                                    ))}
-                                </select>
+                                <div className="flex gap-2">
+                                    <select
+                                        value={newProduct.marca}
+                                        onChange={(e) => setNewProduct({ ...newProduct, marca: e.target.value })}
+                                        className="flex-1 p-3.5 border-2 border-gray-200 rounded-lg-soft font-semibold text-gray-700 focus:outline-none focus:border-orange-300"
+                                    >
+                                        {Object.keys(COLORES_PASTEL).map(marca => (
+                                            <option key={marca} value={marca}>{marca}</option>
+                                        ))}
+                                    </select>
+                                    <button
+                                        onClick={() => setEditingProduct({ isCreatingBrand: true })}
+                                        className="px-4 py-3.5 bg-blue-300 hover:bg-blue-400 text-gray-800 rounded-lg-soft font-bold transition shadow-soft"
+                                        title="Crear nueva marca"
+                                    >
+                                        ➕ Marca
+                                    </button>
+                                </div>
 
                                 <input
                                     type="text"
@@ -829,6 +838,21 @@
                             product={editingProduct}
                             onClose={() => setEditingProduct(null)}
                             onSave={(updates) => onUpdateProduct(selectedBrand, editingProduct.id, updates)}
+                            onAddBrand={(brandName) => {
+                                const colors = ['#a8d5ba', '#7b9fd9', '#e0a3c8', '#ffd966', '#c5a88b', '#9b8fb5'];
+                                const randomColor = colors[Math.floor(Math.random() * colors.length)];
+                                setNewProduct({ ...newProduct, marca: brandName });
+                                setSelectedBrand(brandName);
+                                // Agregar marca con colores por defecto
+                                COLORES_PASTEL[brandName] = {
+                                    color: randomColor,
+                                    colorLight: randomColor + '20',
+                                    colorDark: randomColor,
+                                    icon: '📦'
+                                };
+                                // Crear entrada vacía para la nueva marca en productos
+                                setProductos({ ...productos, [brandName]: [] });
+                            }}
                         />
                     )}
                 </div>
@@ -870,47 +894,62 @@
             );
         }
 
-        function ModalEditar({ product, onClose, onSave }) {
-            const [nombre, setNombre] = useState(product.nombre);
-            const [precio, setPrecio] = useState(product.precio);
-            const [novedad, setNovedad] = useState(product.novedad);
+        function ModalEditar({ product, onClose, onSave, onAddBrand }) {
+            const isCreatingBrand = product?.isCreatingBrand;
+            const [nombre, setNombre] = useState(product?.nombre || '');
+            const [precio, setPrecio] = useState(product?.precio || '');
+            const [novedad, setNovedad] = useState(product?.novedad || '');
 
             const handleSave = () => {
-                onSave({
-                    nombre,
-                    precio: parseFloat(precio),
-                    novedad
-                });
+                if (isCreatingBrand) {
+                    const brandName = nombre.trim().toUpperCase();
+                    if (brandName) {
+                        onAddBrand(brandName);
+                    }
+                } else {
+                    onSave({
+                        nombre,
+                        precio: parseFloat(precio),
+                        novedad
+                    });
+                }
                 onClose();
             };
 
             return (
                 <div className="fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm flex items-end z-50">
                     <div className="bg-white w-full rounded-t-3xl p-6 animate-slideUp shadow-soft-md">
-                        <h2 className="text-2xl font-black mb-5 text-gray-800">✏️ Editar Producto</h2>
+                        <h2 className="text-2xl font-black mb-5 text-gray-800">
+                            {isCreatingBrand ? '✨ Crear Nueva Marca' : '✏️ Editar Producto'}
+                        </h2>
 
                         <div className="grid gap-4 mb-6">
                             <input
                                 type="text"
                                 value={nombre}
-                                onChange={(e) => setNombre(e.target.value)}
+                                onChange={(e) => setNombre(isCreatingBrand ? e.target.value.toUpperCase() : e.target.value)}
                                 className="p-3.5 border-2 border-gray-300 rounded-lg-soft focus:outline-none focus:border-orange-400"
-                                placeholder="Nombre"
+                                placeholder={isCreatingBrand ? "Nombre de la marca (ej: PHILIPS)" : "Nombre"}
+                                autoFocus
                             />
-                            <input
-                                type="number"
-                                value={precio}
-                                onChange={(e) => setPrecio(e.target.value)}
-                                className="p-3.5 border-2 border-gray-300 rounded-lg-soft focus:outline-none focus:border-orange-400"
-                                placeholder="Precio"
-                            />
-                            <input
-                                type="text"
-                                value={novedad}
-                                onChange={(e) => setNovedad(e.target.value)}
-                                className="p-3.5 border-2 border-gray-300 rounded-lg-soft focus:outline-none focus:border-orange-400"
-                                placeholder="Observaciones"
-                            />
+                            {!isCreatingBrand && (
+                                <>
+                                    <input
+                                        type="number"
+                                        value={precio}
+                                        onChange={(e) => setPrecio(e.target.value)}
+                                        className="p-3.5 border-2 border-gray-300 rounded-lg-soft focus:outline-none focus:border-orange-400"
+                                        placeholder="Precio"
+                                    />
+                                    <input
+                                        type="text"
+                                        value={novedad}
+                                        onChange={(e) => setNovedad(e.target.value)}
+                                        className="p-3.5 border-2 border-gray-300 rounded-lg-soft focus:outline-none focus:border-orange-400"
+                                        placeholder="Observaciones"
+                                    />
+                                </>
+                            )}
                         </div>
 
                         <div className="flex gap-3">
@@ -918,7 +957,7 @@
                                 onClick={handleSave}
                                 className="flex-1 bg-gradient-to-r from-green-400 to-emerald-500 hover:from-green-500 hover:to-emerald-600 text-white font-bold py-3 rounded-lg-soft transition shadow-soft-md"
                             >
-                                ✅ Guardar
+                                ✅ {isCreatingBrand ? 'Crear Marca' : 'Guardar'}
                             </button>
                             <button
                                 onClick={onClose}
