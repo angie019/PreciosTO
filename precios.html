@@ -592,7 +592,7 @@
                         if (p.pauta) result.push({ ...p, marca });
                     });
                 });
-                return result;
+                return result.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }));
             }, [productos]);
 
             return (
@@ -705,7 +705,7 @@
                             <h2 className="text-2xl font-black text-gray-800 mb-6">Catálogo por Marca</h2>
 
                             <div className="grid gap-4">
-                                {Object.entries(COLORES_PASTEL).map(([marcaName, config]) => (
+                                {Object.entries(COLORES_PASTEL).sort(([a], [b]) => a.localeCompare(b, 'es', { sensitivity: 'base' })).map(([marcaName, config]) => (
                                     <div key={marcaName}>
                                         <button
                                             onClick={() => setExpandedBrand(expandedBrand === marcaName ? null : marcaName)}
@@ -726,7 +726,7 @@
 
                                         {expandedBrand === marcaName && (
                                             <div className="mt-3 card-base rounded-lg-soft shadow-soft-md overflow-hidden animate-slideUp">
-                                                {(productos[marcaName] || []).map((product) => (
+                                                {[...(productos[marcaName] || [])].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' })).map((product) => (
                                                     <div
                                                         key={product.id}
                                                         className="product-item border-b last:border-b-0 p-4 mx-4 my-3"
@@ -814,7 +814,7 @@
                                         onChange={(e) => setNewProduct({ ...newProduct, marca: e.target.value })}
                                         className="flex-1 p-3.5 border-2 border-gray-200 rounded-lg-soft font-semibold text-gray-700 focus:outline-none focus:border-orange-300"
                                     >
-                                        {Object.keys(colorStore).map(marca => (
+                                        {Object.keys(colorStore).sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' })).map(marca => (
                                             <option key={marca} value={marca}>{marca}</option>
                                         ))}
                                     </select>
@@ -874,7 +874,7 @@
                         <div className="mb-8">
                             <h3 className="text-lg font-black mb-4 text-gray-800">Editar por Marca</h3>
                             <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                                {Object.entries(COLORES_PASTEL).map(([marca, config]) => (
+                                {Object.entries(COLORES_PASTEL).sort(([a], [b]) => a.localeCompare(b, 'es', { sensitivity: 'base' })).map(([marca, config]) => (
                                     <button
                                         key={marca}
                                         onClick={() => setSelectedBrand(marca)}
@@ -900,7 +900,7 @@
                             </div>
 
                             <div className="divide-y divide-gray-200">
-                                {(productos[selectedBrand] || []).map(product => (
+                                {[...(productos[selectedBrand] || [])].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' })).map(product => (
                                     <div key={product.id} className="p-5 hover:bg-gray-50 transition">
                                         <div className="flex justify-between items-start gap-4 mb-3">
                                             <div className="flex-1">
