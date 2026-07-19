@@ -24,6 +24,10 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
+    <!-- Firebase (sincroniza los precios entre todos los teléfonos en tiempo real) -->
+    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
+
     <style>
         * {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
@@ -224,7 +228,24 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useCallback, useMemo } = React;
+        const { useState, useEffect, useCallback, useMemo, useRef } = React;
+
+        // Configuración de Firebase: guarda los productos en la nube para que
+        // los cambios del panel admin se vean en todos los teléfonos al instante.
+        const firebaseConfig = {
+            apiKey: "AIzaSyCMUjkOewWmuOV7DOZK0aQgn2gkkfRbDBI",
+            authDomain: "preciosto.firebaseapp.com",
+            databaseURL: "https://preciosto-default-rtdb.firebaseio.com",
+            projectId: "preciosto",
+            storageBucket: "preciosto.firebasestorage.app",
+            messagingSenderId: "190680807610",
+            appId: "1:190680807610:web:119b1d26d10f8a87f4aa83"
+        };
+
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const productosRef = firebase.database().ref('productos');
 
         // Paleta de colores pastel suave (del dashboard)
         const COLORES_PASTEL = {
@@ -519,13 +540,50 @@
             const [expandedBrand, setExpandedBrand] = useState(null);
             const [editingProduct, setEditingProduct] = useState(null);
             const [newProduct, setNewProduct] = useState({ marca: 'APPLE', nombre: '', precio: '', novedad: '', pauta: false });
+            const [syncStatus, setSyncStatus] = useState('conectando'); // conectando | conectado | offline
 
             const ADMIN_PASSWORD = 'tecno2024';
+            const isRemoteUpdate = useRef(false);
+            const hasSyncedOnce = useRef(false);
 
+            // Guarda copia local (por si no hay internet) cada vez que cambian los productos
             useEffect(() => {
                 localStorage.setItem('tecno_productos', JSON.stringify(productos));
                 localStorage.setItem('tecno_productos_version', DATA_VERSION);
+
+                // Si el cambio vino de Firebase (otro teléfono), no lo reenviamos
+                if (isRemoteUpdate.current) {
+                    isRemoteUpdate.current = false;
+                    return;
+                }
+                // Todavía no sabemos qué hay guardado en Firebase: esperamos a
+                // recibir el primer dato antes de poder subir cambios, para no
+                // sobrescribir por accidente lo que otro teléfono ya guardó.
+                if (!hasSyncedOnce.current) {
+                    return;
+                }
+                // Cambio hecho por esta persona (admin): lo sube para que todos lo vean
+                productosRef.set(productos).catch(() => setSyncStatus('offline'));
             }, [productos]);
+
+            // Escucha cambios en tiempo real desde Firebase (cambios hechos en otros teléfonos)
+            useEffect(() => {
+                productosRef.on('value', (snapshot) => {
+                    const data = snapshot.val();
+                    if (data) {
+                        isRemoteUpdate.current = true;
+                        setProductos(data);
+                    } else {
+                        // Base de datos vacía todavía: la sembramos con el catálogo actual
+                        productosRef.set(productos);
+                    }
+                    hasSyncedOnce.current = true;
+                    setSyncStatus('conectado');
+                }, () => setSyncStatus('offline'));
+
+                return () => productosRef.off();
+                // eslint-disable-next-line react-hooks/exhaustive-deps
+            }, []);
 
             const handleAdminLogin = (e) => {
                 e.preventDefault();
@@ -612,6 +670,7 @@
                             <VistaAdmin
                                 productos={productos}
                                 COLORES_PASTEL={COLORES_PASTEL}
+                                syncStatus={syncStatus}
                                 onLogout={handleAdminLogout}
                                 onAddProduct={handleAddProduct}
                                 onDeleteProduct={handleDeleteProduct}
@@ -775,11 +834,17 @@
             );
         }
 
-        function VistaAdmin({ productos, COLORES_PASTEL, onLogout, onAddProduct, onDeleteProduct, onUpdateProduct, onTogglePauta, newProduct, setNewProduct, editingProduct, setEditingProduct }) {
+        function VistaAdmin({ productos, COLORES_PASTEL, syncStatus, onLogout, onAddProduct, onDeleteProduct, onUpdateProduct, onTogglePauta, newProduct, setNewProduct, editingProduct, setEditingProduct }) {
             const [selectedBrand, setSelectedBrand] = useState('APPLE');
             const [creatingBrand, setCreatingBrand] = useState(false);
             const [newBrandName, setNewBrandName] = useState('');
             const [colorStore, setColorStore] = useState(COLORES_PASTEL);
+
+            const syncBadge = {
+                conectando: { text: '🟡 Conectando...', className: 'bg-yellow-100 text-yellow-700' },
+                conectado: { text: '🟢 Cambios en vivo', className: 'bg-green-100 text-green-700' },
+                offline: { text: '🔴 Sin conexión', className: 'bg-red-100 text-red-700' }
+            }[syncStatus] || { text: '🟡 Conectando...', className: 'bg-yellow-100 text-yellow-700' };
 
             return (
                 <div className="min-h-screen pb-24">
@@ -791,6 +856,9 @@
                                 <div>
                                     <h1 className="text-2xl font-black text-gray-800">🔧 Panel Admin</h1>
                                     <p className="text-gray-600 text-xs mt-0.5">Gestión de precios</p>
+                                    <span className={`inline-block mt-1 text-xs font-bold px-2.5 py-1 rounded-full ${syncBadge.className}`}>
+                                        {syncBadge.text}
+                                    </span>
                                 </div>
                             </div>
                             <button
