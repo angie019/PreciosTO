@@ -628,15 +628,16 @@
             };
 
             const handleAddProduct = (marca) => {
-                if (!newProduct.nombre || !newProduct.precio) return;
+                if (!newProduct.nombre || newProduct.precio === '') return;
 
+                const precioNum = parseFloat(newProduct.precio);
                 const id = `${marca.toLowerCase()}_${Date.now()}`;
                 const updatedProducts = {
                     ...productos,
                     [marca]: [...(productos[marca] || []), {
                         id,
                         nombre: newProduct.nombre,
-                        precio: parseFloat(newProduct.precio),
+                        precio: isNaN(precioNum) ? 0 : precioNum,
                         novedad: newProduct.novedad,
                         pauta: newProduct.pauta
                     }]
@@ -772,7 +773,7 @@
                                                     </div>
                                                     <div className="text-right flex-shrink-0">
                                                         <p className="text-2xl font-black" style={{ color: COLORES_PASTEL[product.marca]?.color }}>
-                                                            ${product.precio.toLocaleString()}
+                                                            ${(Number.isFinite(product.precio) ? product.precio : 0).toLocaleString()}
                                                         </p>
                                                     </div>
                                                 </div>
@@ -833,7 +834,7 @@
                                                             </div>
                                                             <div className="text-right flex-shrink-0">
                                                                 <p className="text-xl font-black" style={{ color: config.color }}>
-                                                                    ${product.precio.toLocaleString()}
+                                                                    ${(Number.isFinite(product.precio) ? product.precio : 0).toLocaleString()}
                                                                 </p>
                                                             </div>
                                                         </div>
@@ -1007,7 +1008,7 @@
                                             </div>
                                             <div className="text-right flex-shrink-0">
                                                 <p className="text-2xl font-black" style={{ color: COLORES_PASTEL[selectedBrand]?.color }}>
-                                                    ${product.precio.toLocaleString()}
+                                                    ${(Number.isFinite(product.precio) ? product.precio : 0).toLocaleString()}
                                                 </p>
                                                 {product.pauta && (
                                                     <span className="inline-block mt-2 badge-pauta">PAUTA</span>
@@ -1136,7 +1137,7 @@
         function ModalEditar({ product, onClose, onSave, onAddBrand }) {
             const isCreatingBrand = product?.isCreatingBrand;
             const [nombre, setNombre] = useState(product?.nombre || '');
-            const [precio, setPrecio] = useState(product?.precio || '');
+            const [precio, setPrecio] = useState(product?.precio ?? '');
             const [novedad, setNovedad] = useState(product?.novedad || '');
 
             const handleSave = () => {
@@ -1146,9 +1147,10 @@
                         onAddBrand(brandName);
                     }
                 } else {
+                    const precioNum = parseFloat(precio);
                     onSave({
                         nombre,
-                        precio: parseFloat(precio),
+                        precio: isNaN(precioNum) ? 0 : precioNum,
                         novedad
                     });
                 }
