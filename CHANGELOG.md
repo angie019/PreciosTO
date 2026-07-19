@@ -7,6 +7,12 @@ Repositorio: **https://github.com/angie019/PreciosTO**
 
 ## 18 de julio 2026
 
+### Corregido: pantalla en blanco en el celular
+- Se reportó que la app se quedaba en blanco en el teléfono de la persona del panel admin.
+- Causa: si Firebase no lograba cargar a tiempo (mala señal, red lenta), ese error tumbaba toda la app antes de que React llegara a mostrar nada.
+- Se blindó el código: si Firebase falla, la app ahora sigue funcionando en modo local (con la última copia guardada en el teléfono) en vez de quedar en blanco. También se agregó una pantalla de error con botón "Recargar" como respaldo para cualquier otro fallo inesperado, y validación de los datos que llegan desde Firebase para que un dato corrupto no rompa la app.
+- Commit: `1f1a8da`
+
 ### Sincronización en tiempo real entre dispositivos
 - Se conectó la app a **Firebase Realtime Database** (proyecto `preciosto`) para que los productos ya no vivan solo en el navegador de cada teléfono (localStorage), sino en una base de datos central en la nube.
 - Cuando la persona con acceso al panel admin hace un cambio desde su teléfono (agregar, editar, borrar producto, marcar pauta, crear marca), el cambio se sube a Firebase y se refleja **al instante** en las pantallas de todos los demás dispositivos, sin recargar la página.
