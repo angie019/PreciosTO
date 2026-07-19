@@ -242,10 +242,20 @@
             appId: "1:190680807610:web:119b1d26d10f8a87f4aa83"
         };
 
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
+        // Si Firebase no logra cargar (mala señal, red lenta, bloqueo del
+        // navegador, etc.) la app NO debe quedar en blanco: sigue funcionando
+        // con la copia guardada en el teléfono (modo local) hasta reconectar.
+        let productosRef = null;
+        try {
+            if (typeof firebase !== 'undefined') {
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(firebaseConfig);
+                }
+                productosRef = firebase.database().ref('productos');
+            }
+        } catch (e) {
+            console.error('No se pudo conectar con Firebase, la app sigue funcionando en modo local:', e);
         }
-        const productosRef = firebase.database().ref('productos');
 
         // Paleta de colores pastel suave (del dashboard)
         const COLORES_PASTEL = {
@@ -563,19 +573,37 @@
                     return;
                 }
                 // Cambio hecho por esta persona (admin): lo sube para que todos lo vean
-                productosRef.set(productos).catch(() => setSyncStatus('offline'));
+                if (productosRef) {
+                    productosRef.set(productos).catch(() => setSyncStatus('offline'));
+                }
             }, [productos]);
 
             // Escucha cambios en tiempo real desde Firebase (cambios hechos en otros teléfonos)
             useEffect(() => {
+                // Sin conexión a Firebase: seguimos en modo local (localStorage) sin romper la app
+                if (!productosRef) {
+                    setSyncStatus('offline');
+                    return;
+                }
+
                 productosRef.on('value', (snapshot) => {
-                    const data = snapshot.val();
-                    if (data) {
-                        isRemoteUpdate.current = true;
-                        setProductos(data);
-                    } else {
-                        // Base de datos vacía todavía: la sembramos con el catálogo actual
-                        productosRef.set(productos);
+                    try {
+                        const data = snapshot.val();
+                        // Validamos que la data tenga forma correcta (objeto de marcas -> arreglos)
+                        // antes de usarla, para que un dato corrupto no tumbe la app.
+                        if (data && typeof data === 'object') {
+                            const normalizado = {};
+                            Object.entries(data).forEach(([marca, prods]) => {
+                                normalizado[marca] = Array.isArray(prods) ? prods : Object.values(prods || {});
+                            });
+                            isRemoteUpdate.current = true;
+                            setProductos(normalizado);
+                        } else {
+                            // Base de datos vacía todavía: la sembramos con el catálogo actual
+                            productosRef.set(productos);
+                        }
+                    } catch (e) {
+                        console.error('Error leyendo datos de Firebase, se mantiene la copia local:', e);
                     }
                     hasSyncedOnce.current = true;
                     setSyncStatus('conectado');
@@ -646,7 +674,7 @@
             const productosPauta = useMemo(() => {
                 const result = [];
                 Object.entries(productos).forEach(([marca, prods]) => {
-                    prods.forEach(p => {
+                    (Array.isArray(prods) ? prods : []).forEach(p => {
                         if (p.pauta) result.push({ ...p, marca });
                     });
                 });
@@ -1230,8 +1258,44 @@
             );
         }
 
+        // Red de seguridad: si algo inesperado falla al mostrar la app, en vez
+        // de dejar la pantalla en blanco se muestra un aviso con un botón para
+        // recargar (y así no parece que la app "se murió").
+        class ErrorBoundary extends React.Component {
+            constructor(props) {
+                super(props);
+                this.state = { hasError: false };
+            }
+            static getDerivedStateFromError() {
+                return { hasError: true };
+            }
+            componentDidCatch(error, info) {
+                console.error('Error en la app:', error, info);
+            }
+            render() {
+                if (this.state.hasError) {
+                    return (
+                        <div className="min-h-screen flex items-center justify-center p-6 text-center">
+                            <div>
+                                <p className="text-4xl mb-4">😕</p>
+                                <p className="text-lg font-bold text-gray-800 mb-2">Algo salió mal cargando la app</p>
+                                <p className="text-sm text-gray-500 mb-6">Puede ser la conexión a internet. Intenta recargar la página.</p>
+                                <button
+                                    onClick={() => window.location.reload()}
+                                    className="bg-gradient-to-r from-orange-400 to-orange-500 text-white font-bold py-3 px-6 rounded-lg-soft shadow-soft-md"
+                                >
+                                    🔄 Recargar
+                                </button>
+                            </div>
+                        </div>
+                    );
+                }
+                return this.props.children;
+            }
+        }
+
         const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+        root.render(<ErrorBoundary><App /></ErrorBoundary>);
     </script>
 </body>
 </html>
