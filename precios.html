@@ -643,7 +643,9 @@
                     }]
                 };
                 setProductos(updatedProducts);
-                setNewProduct({ marca: 'APPLE', nombre: '', precio: '', novedad: '', pauta: false });
+                // Se mantiene la misma marca seleccionada (no vuelve a APPLE),
+                // para no agregar por accidente el siguiente producto a la marca equivocada.
+                setNewProduct({ marca, nombre: '', precio: '', novedad: '', pauta: false });
             };
 
             const handleDeleteProduct = (marca, productId) => {
