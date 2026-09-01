@@ -719,12 +719,25 @@
             };
 
             const handleUpdateProduct = (marca, productId, updates) => {
-                setProductos({
-                    ...productos,
-                    [marca]: productos[marca].map(p =>
-                        p.id === productId ? { ...p, ...updates } : p
-                    )
-                });
+                const { marca: nuevaMarca, ...restoUpdates } = updates;
+
+                if (nuevaMarca && nuevaMarca !== marca) {
+                    // Mover el producto a otra marca
+                    const producto = (productos[marca] || []).find(p => p.id === productId);
+                    if (!producto) return;
+                    setProductos({
+                        ...productos,
+                        [marca]: (productos[marca] || []).filter(p => p.id !== productId),
+                        [nuevaMarca]: [...(productos[nuevaMarca] || []), { ...producto, ...restoUpdates }]
+                    });
+                } else {
+                    setProductos({
+                        ...productos,
+                        [marca]: productos[marca].map(p =>
+                            p.id === productId ? { ...p, ...restoUpdates } : p
+                        )
+                    });
+                }
                 setEditingProduct(null);
             };
 
@@ -1112,7 +1125,7 @@
                                                 {product.pauta ? '✅ En Pauta' : '➕ Pauta'}
                                             </button>
                                             <button
-                                                onClick={() => setEditingProduct(product)}
+                                                onClick={() => setEditingProduct({ ...product, marca: selectedBrand })}
                                                 className="px-4 py-2.5 bg-blue-300 hover:bg-blue-400 text-gray-800 rounded-lg text-sm font-bold transition shadow-soft"
                                             >
                                                 ✏️ Editar
@@ -1145,6 +1158,7 @@
                     {editingProduct && (
                         <ModalEditar
                             product={editingProduct}
+                            marcasDisponibles={COLORES_PASTEL}
                             onClose={() => setEditingProduct(null)}
                             onSave={(updates) => onUpdateProduct(selectedBrand, editingProduct.id, updates)}
                         />
@@ -1200,11 +1214,12 @@
             );
         }
 
-        function ModalEditar({ product, onClose, onSave, onAddBrand }) {
+        function ModalEditar({ product, marcasDisponibles, onClose, onSave, onAddBrand }) {
             const isCreatingBrand = product?.isCreatingBrand;
             const [nombre, setNombre] = useState(product?.nombre || '');
             const [precio, setPrecio] = useState(product?.precio ?? '');
             const [novedad, setNovedad] = useState(product?.novedad || '');
+            const [marca, setMarca] = useState(product?.marca || '');
 
             const handleSave = () => {
                 if (isCreatingBrand) {
@@ -1217,7 +1232,8 @@
                     onSave({
                         nombre,
                         precio: isNaN(precioNum) ? 0 : precioNum,
-                        novedad
+                        novedad,
+                        marca
                     });
                 }
                 onClose();
@@ -1255,6 +1271,17 @@
                                         className="p-3.5 border-2 border-gray-300 rounded-lg-soft focus:outline-none focus:border-orange-400"
                                         placeholder="Observaciones"
                                     />
+                                    {marcasDisponibles && (
+                                        <select
+                                            value={marca}
+                                            onChange={(e) => setMarca(e.target.value)}
+                                            className="p-3.5 border-2 border-gray-300 rounded-lg-soft font-semibold text-gray-700 focus:outline-none focus:border-orange-400"
+                                        >
+                                            {Object.keys(marcasDisponibles).sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' })).map(m => (
+                                                <option key={m} value={m}>{m}</option>
+                                            ))}
+                                        </select>
+                                    )}
                                 </>
                             )}
                         </div>
