@@ -246,12 +246,14 @@
         // navegador, etc.) la app NO debe quedar en blanco: sigue funcionando
         // con la copia guardada en el teléfono (modo local) hasta reconectar.
         let productosRef = null;
+        let marcasRef = null;
         try {
             if (typeof firebase !== 'undefined') {
                 if (!firebase.apps.length) {
                     firebase.initializeApp(firebaseConfig);
                 }
                 productosRef = firebase.database().ref('productos');
+                marcasRef = firebase.database().ref('marcas');
             }
         } catch (e) {
             console.error('No se pudo conectar con Firebase, la app sigue funcionando en modo local:', e);
@@ -552,9 +554,27 @@
             const [newProduct, setNewProduct] = useState({ marca: 'APPLE', nombre: '', precio: '', novedad: '', pauta: false });
             const [syncStatus, setSyncStatus] = useState('conectando'); // conectando | conectado | offline
 
+            // Lista de marcas (nombre, color, ícono). Antes vivía solo en el panel
+            // admin y por eso una marca nueva no se veía en ningún lado; ahora se
+            // sincroniza igual que los productos, para que aparezca en todos los
+            // teléfonos y no se pierda al recargar.
+            const [marcasConfig, setMarcasConfig] = useState(() => {
+                const saved = localStorage.getItem('tecno_marcas');
+                if (saved) {
+                    try {
+                        return JSON.parse(saved);
+                    } catch (e) {
+                        return COLORES_PASTEL;
+                    }
+                }
+                return COLORES_PASTEL;
+            });
+
             const ADMIN_PASSWORD = 'tecno2024';
             const isRemoteUpdate = useRef(false);
             const hasSyncedOnce = useRef(false);
+            const isRemoteUpdateMarcas = useRef(false);
+            const hasSyncedOnceMarcas = useRef(false);
 
             // Guarda copia local (por si no hay internet) cada vez que cambian los productos
             useEffect(() => {
@@ -610,6 +630,49 @@
                 }, () => setSyncStatus('offline'));
 
                 return () => productosRef.off();
+                // eslint-disable-next-line react-hooks/exhaustive-deps
+            }, []);
+
+            // Guarda copia local de las marcas y sube cambios (ej. una marca nueva)
+            useEffect(() => {
+                localStorage.setItem('tecno_marcas', JSON.stringify(marcasConfig));
+
+                if (isRemoteUpdateMarcas.current) {
+                    isRemoteUpdateMarcas.current = false;
+                    return;
+                }
+                if (!hasSyncedOnceMarcas.current) {
+                    return;
+                }
+                if (marcasRef) {
+                    marcasRef.set(marcasConfig).catch(() => {});
+                }
+            }, [marcasConfig]);
+
+            // Escucha cambios de marcas en tiempo real (ej. una marca creada en otro teléfono)
+            useEffect(() => {
+                if (!marcasRef) {
+                    hasSyncedOnceMarcas.current = true;
+                    return;
+                }
+
+                marcasRef.on('value', (snapshot) => {
+                    try {
+                        const data = snapshot.val();
+                        if (data && typeof data === 'object') {
+                            isRemoteUpdateMarcas.current = true;
+                            setMarcasConfig(data);
+                        } else {
+                            // Todavía no existe en Firebase: la sembramos con las marcas actuales
+                            marcasRef.set(marcasConfig);
+                        }
+                    } catch (e) {
+                        console.error('Error leyendo marcas de Firebase, se mantiene la copia local:', e);
+                    }
+                    hasSyncedOnceMarcas.current = true;
+                }, () => {});
+
+                return () => marcasRef.off();
                 // eslint-disable-next-line react-hooks/exhaustive-deps
             }, []);
 
@@ -674,6 +737,26 @@
                 });
             };
 
+            const handleCreateBrand = (brandName) => {
+                const marcaUpper = brandName.trim().toUpperCase();
+                if (!marcaUpper || marcasConfig[marcaUpper]) return;
+
+                const colors = ['#a8d5ba', '#7b9fd9', '#e0a3c8', '#ffd966', '#c5a88b', '#9b8fb5'];
+                const randomColor = colors[Math.floor(Math.random() * colors.length)];
+
+                setMarcasConfig({
+                    ...marcasConfig,
+                    [marcaUpper]: {
+                        color: randomColor,
+                        colorLight: randomColor + '20',
+                        colorDark: randomColor,
+                        icon: '📦'
+                    }
+                });
+                setProductos({ ...productos, [marcaUpper]: productos[marcaUpper] || [] });
+                setNewProduct({ ...newProduct, marca: marcaUpper });
+            };
+
             const productosPauta = useMemo(() => {
                 const result = [];
                 Object.entries(productos).forEach(([marca, prods]) => {
@@ -691,7 +774,7 @@
                         {!isAdmin ? (
                             <VistaEmpleados
                                 productos={productos}
-                                COLORES_PASTEL={COLORES_PASTEL}
+                                COLORES_PASTEL={marcasConfig}
                                 expandedBrand={expandedBrand}
                                 setExpandedBrand={setExpandedBrand}
                                 productosPauta={productosPauta}
@@ -700,13 +783,14 @@
                         ) : (
                             <VistaAdmin
                                 productos={productos}
-                                COLORES_PASTEL={COLORES_PASTEL}
+                                COLORES_PASTEL={marcasConfig}
                                 syncStatus={syncStatus}
                                 onLogout={handleAdminLogout}
                                 onAddProduct={handleAddProduct}
                                 onDeleteProduct={handleDeleteProduct}
                                 onUpdateProduct={handleUpdateProduct}
                                 onTogglePauta={handleTogglePauta}
+                                onCreateBrand={handleCreateBrand}
                                 newProduct={newProduct}
                                 setNewProduct={setNewProduct}
                                 editingProduct={editingProduct}
@@ -865,11 +949,9 @@
             );
         }
 
-        function VistaAdmin({ productos, COLORES_PASTEL, syncStatus, onLogout, onAddProduct, onDeleteProduct, onUpdateProduct, onTogglePauta, newProduct, setNewProduct, editingProduct, setEditingProduct }) {
+        function VistaAdmin({ productos, COLORES_PASTEL, syncStatus, onLogout, onAddProduct, onDeleteProduct, onUpdateProduct, onTogglePauta, onCreateBrand, newProduct, setNewProduct, editingProduct, setEditingProduct }) {
             const [selectedBrand, setSelectedBrand] = useState('APPLE');
             const [creatingBrand, setCreatingBrand] = useState(false);
-            const [newBrandName, setNewBrandName] = useState('');
-            const [colorStore, setColorStore] = useState(COLORES_PASTEL);
 
             const syncBadge = {
                 conectando: { text: '🟡 Conectando...', className: 'bg-yellow-100 text-yellow-700' },
@@ -913,7 +995,7 @@
                                         onChange={(e) => setNewProduct({ ...newProduct, marca: e.target.value })}
                                         className="flex-1 p-3.5 border-2 border-gray-200 rounded-lg-soft font-semibold text-gray-700 focus:outline-none focus:border-orange-300"
                                     >
-                                        {Object.keys(colorStore).sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' })).map(marca => (
+                                        {Object.keys(COLORES_PASTEL).sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' })).map(marca => (
                                             <option key={marca} value={marca}>{marca}</option>
                                         ))}
                                     </select>
@@ -1052,28 +1134,10 @@
                         <ModalCrearMarca
                             onClose={() => setCreatingBrand(false)}
                             onSave={(brandName) => {
-                                const marcaUpper = brandName.toUpperCase();
-                                const colors = ['#a8d5ba', '#7b9fd9', '#e0a3c8', '#ffd966', '#c5a88b', '#9b8fb5'];
-                                const randomColor = colors[Math.floor(Math.random() * colors.length)];
-
-                                // Agregar marca con color automático
-                                const newColorStore = { ...colorStore };
-                                newColorStore[marcaUpper] = {
-                                    color: randomColor,
-                                    colorLight: randomColor + '20',
-                                    colorDark: randomColor,
-                                    icon: '📦'
-                                };
-                                setColorStore(newColorStore);
-
-                                // Crear entrada vacía para la nueva marca en productos
-                                setProductos({ ...productos, [marcaUpper]: [] });
-
-                                // Cambiar a la nueva marca
-                                setNewProduct({ ...newProduct, marca: marcaUpper });
+                                const marcaUpper = brandName.trim().toUpperCase();
+                                onCreateBrand(marcaUpper);
                                 setSelectedBrand(marcaUpper);
                                 setCreatingBrand(false);
-                                setNewBrandName('');
                             }}
                         />
                     )}
