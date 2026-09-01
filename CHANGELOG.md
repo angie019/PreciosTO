@@ -5,6 +5,17 @@ Repositorio: **https://github.com/angie019/PreciosTO**
 
 ---
 
+## 1 de septiembre 2026
+
+### Corregido: crear una marca nueva no aparecía en ningún lado
+- Causa: el color/ícono de una marca nueva se guardaba solo en una lista temporal dentro del panel admin, mientras que el catálogo público y la sección "Editar por Marca" leían de otra lista fija que nunca se enteraba de la marca nueva. Además esa lista temporal no se guardaba en Firebase ni en el teléfono, así que se perdía al recargar.
+- Se unificó todo en una sola lista de marcas (`marcasConfig`) que ahora se sincroniza en tiempo real por Firebase, igual que los productos. Una marca nueva ya aparece de inmediato en el catálogo público y en el panel admin, en todos los teléfonos, y sobrevive a recargar la página.
+- Antes de este cambio se guardó una copia de seguridad completa (código y datos de Firebase) en la carpeta `backups/`.
+- Commit: `05a5ff4` (backup: `6aa6bde`)
+
+### Token de GitHub renovado
+- El token de acceso anterior dejó de funcionar (expiró/fue revocado). Se generó uno nuevo con permiso `repo` completo y se actualizó en el repositorio.
+
 ## 18 de julio 2026
 
 ### Corregido: pantalla en blanco en el celular
