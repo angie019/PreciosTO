@@ -13,7 +13,7 @@
         // trae los últimos cambios. Este chequeo obliga una recarga limpia
         // cuando detecta que la copia abierta quedó desactualizada.
         (function () {
-            var APP_VERSION = '2026-09-11-1';
+            var APP_VERSION = '2026-09-11-2';
             try {
                 fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
                     .then(function (r) { return r.json(); })
@@ -799,7 +799,10 @@
                         if (p.pauta) result.push({ ...p, marca });
                     });
                 });
-                return result.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }));
+                return result.sort((a, b) =>
+                    a.marca.localeCompare(b.marca, 'es', { sensitivity: 'base' }) ||
+                    (a.nombre || '').trim().localeCompare((b.nombre || '').trim(), 'es', { sensitivity: 'base' })
+                );
             }, [productos]);
 
             return (
